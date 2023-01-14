@@ -1,0 +1,22 @@
+[package]
+name = "better-ls"
+version = "0.1.0"
+authors = ["Marlom Girardi"]
+edition = "2021"
+description = "A better ls command"
+license-file = "LICENSE"
+readme = "README.md"
+keywords = ["ls", "better-ls", "ls command", "better ls command"]
+categories = ["command-line-utilities"]
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.0.32", features = ["derive"] }
+crossterm = "0.25.0"
+chrono = "0.4.23"
+libc = "0.2.139"
+users = "0.11.0"
