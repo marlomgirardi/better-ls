@@ -1,0 +1,13 @@
+
+icons:
+  .git:     ""
+  .github:  ""
+  .vscode:  ""
+  .Trash:   ""
+  config:   ""
+  node_modules: ""
+aliases:
+  .nvm: node_modules
+  .npm: node_modules
+  .pnpm-state: node_modules
+  .yarn: node_modules

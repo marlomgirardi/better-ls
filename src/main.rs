@@ -1,4 +1,5 @@
 mod cli;
+mod config;
 mod entry;
 
 use clap::Parser;
@@ -13,11 +14,11 @@ fn main() {
     }
 
     if paths.len() > 1 {
+        // TODO: handle multiple paths
         for path in paths {
             entry::list_entries(&path);
         }
     } else {
-        // TODO: handle multiple paths
         entry::list_entries(&paths[0]);
     }
 }

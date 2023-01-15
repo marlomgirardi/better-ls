@@ -1,4 +1,5 @@
 use chrono::prelude::{DateTime, Local};
+use colored::*;
 use core::str::from_utf8_unchecked;
 use libc;
 use std::ffi::CStr;
@@ -7,6 +8,9 @@ use std::io;
 use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 use std::time::SystemTime;
+
+use crate::config;
+use crate::config::DEFAULT_ICON_FILE;
 
 pub fn list_entries(path: &PathBuf) {
     // Get the contents of the directory
@@ -50,15 +54,14 @@ pub fn list_entries(path: &PathBuf) {
         let group = get_groupname(metadata.gid()).unwrap();
 
         println!(
-            "{:>10} {:>5} {:>10} {:>10} {:>10} {:>10} {:>3}  {}",
+            "{:>10} {:>5} {:>10} {:>10} {:>10} {:>10}   {}",
             format_permissions(permissions),
             link_count,
             owner,
             group,
             size,
             format_date(modified),
-            get_icon_from_metadata(&metadata, &name.to_string_lossy()),
-            name.to_string_lossy() + (if metadata.is_dir() { "/" } else { "" }),
+            format_filename(&name.to_string_lossy(), &metadata),
         );
     }
 }
@@ -124,171 +127,83 @@ fn get_groupname(gid: u32) -> io::Result<String> {
     Ok(groupname.to_string())
 }
 
-// TODO: better way to do this?
-// https://www.nerdfonts.com/cheat-sheet
-fn get_icon(file_type: &str) -> String {
-    match file_type {
-        // directories
-        "directory" => "",
-        "vscode" => "",
-        "symlink" => "",
+fn format_filename(name: &str, metadata: &fs::Metadata) -> String {
+    let colors = config::get_colors(None); // TODO: get from config?
+    let mut file_name = String::from(name);
 
-        // Programming languages
-        "c" => "ﭰ",
-        "cpp" => "ﭱ",
-        "go-lang" => "",
-        "java" => "",
-        "swift" => "ﯣ",
-        "php" => "",
-        "rust" => "",
-        "python" => "",
-        "javascript" => "",
-        "typescript" => "",
-        "html" => "",
-        "css" => "",
-        "json" => "",
-        "yaml" => "",
-        "toml" => "",
-        "xml" => "",
-        "svg" => "",
-        "lock" => "",
-        "ruby" => "",
+    let icon = get_icon_from_metadata(&metadata, &name);
 
-        "test" => "",
+    let name_color = if metadata.is_dir() {
+        file_name.push('/');
+        &colors.dir
+    } else if metadata.is_file() {
+        if icon == DEFAULT_ICON_FILE {
+            &colors.unrecognized_file
+        } else {
+            &colors.recognized_file
+        }
+    } else {
+        &colors.unrecognized_file
+    };
 
-        "compressed" => "",
-
-        // documents
-        "pdf" => "",
-        "doc" => "",
-        "xls" => "",
-
-        // text
-        "text" => "",
-        "markdown" => "",
-
-        // images
-        "image" => "",
-
-        // audio
-        "audio" => "",
-
-        // video
-        "video" => "",
-
-        // git
-        "git" => "",
-        "npm" => "",
-
-        // OS exclusive files
-        "apple" => "",
-        "windows" => "",
-
-        _ => "",
-    }
-    .to_string()
+    format!(
+        "{}   {}",
+        icon.truecolor(name_color[0], name_color[1], name_color[2],),
+        file_name.truecolor(name_color[0], name_color[1], name_color[2],)
+    )
 }
 
-fn get_icon_from_metadata(metadata: &fs::Metadata, base_file_name: &str) -> String {
+fn get_icon_from_metadata<'a>(metadata: &'a fs::Metadata, base_file_name: &'a str) -> &'a str {
     let file_name = base_file_name.to_lowercase();
 
-    get_icon(if metadata.is_dir() {
-        match file_name {
-            // Git
-            _ if file_name == ".git" => "git",
-            _ if file_name == ".vscode" => "vscode",
-            _ if file_name == ".gem" => "ruby",
-            _ if file_name == ".yarn" => "ruby",
-
-            _ => "directory",
-        }
+    if metadata.is_dir() {
+        get_directory_icon(file_name)
     } else if metadata.is_file() {
-        match file_name {
-            _ if file_name == "package-lock.json" => "lock",
-            _ if file_name == "yarn.lock" => "lock",
-            _ if file_name == "pnpm-lock.yaml" => "lock",
-            _ if file_name == ".gitignore" => "git",
-
-            // OS exclusive files
-            _ if file_name == ".ds_store" => "apple",
-            _ if file_name == "thumbs.db" => "windows",
-            _ if file_name == "desktop.ini" => "windows",
-
-            // Test files
-            _ if file_name.ends_with(".spec.js") => "test",
-            _ if file_name.ends_with(".spec.ts") => "test",
-            _ if file_name.ends_with(".test.js") => "test",
-            _ if file_name.ends_with(".test.ts") => "test",
-
-            // Programming Languages
-            _ if file_name.ends_with(".rs") => "rust",
-            _ if file_name.ends_with(".py") => "python",
-            _ if file_name.ends_with(".js") => "javascript",
-            _ if file_name.ends_with(".ts") => "typescript",
-            _ if file_name.ends_with(".html") => "html",
-            _ if file_name.ends_with(".css") => "css",
-            _ if file_name.ends_with(".json") => "json",
-            _ if file_name.ends_with(".toml") => "toml",
-            _ if file_name.ends_with(".sh") => "shell",
-            _ if file_name.ends_with(".c") => "c",
-            _ if file_name.ends_with(".cpp") => "cpp",
-            _ if file_name.ends_with(".h") => "h",
-            _ if file_name.ends_with(".hpp") => "hpp",
-            _ if file_name.ends_with(".java") => "java",
-            _ if file_name.ends_with(".go") => "go-lang",
-            _ if file_name.ends_with(".dart") => "dart",
-            _ if file_name.ends_with(".kt") => "kotlin",
-            _ if file_name.ends_with(".swift") => "swift",
-            _ if file_name.ends_with(".php") => "php",
-            _ if file_name.ends_with(".rb") => "ruby",
-            _ if file_name.ends_with(".lua") => "lua",
-            _ if file_name.ends_with(".sql") => "sql",
-            _ if file_name.ends_with(".yaml") => "yaml",
-            _ if file_name.ends_with(".yml") => "yaml",
-            _ if file_name.ends_with(".lock") => "lock",
-
-            // Compressed
-            _ if file_name.ends_with(".zip") => "compressed",
-            _ if file_name.ends_with(".tar") => "compressed",
-            _ if file_name.ends_with(".gz") => "compressed",
-            _ if file_name.ends_with(".xz") => "compressed",
-            _ if file_name.ends_with(".bz2") => "compressed",
-            _ if file_name.ends_with(".7z") => "compressed",
-            _ if file_name.ends_with(".rar") => "compressed",
-
-            // Documents
-            _ if file_name.ends_with(".pdf") => "pdf",
-            _ if file_name.ends_with(".doc") => "doc",
-            _ if file_name.ends_with(".docx") => "doc",
-            _ if file_name.ends_with(".xls") => "xls",
-            _ if file_name.ends_with(".xlsx") => "xls",
-
-            // text
-            _ if file_name.ends_with(".txt") => "text",
-            _ if file_name.ends_with(".log") => "text",
-            _ if file_name.ends_with(".md") => "markdown",
-
-            // images
-            _ if file_name.ends_with(".png") => "image",
-            _ if file_name.ends_with(".jpg") => "image",
-            _ if file_name.ends_with(".jpeg") => "image",
-            _ if file_name.ends_with(".gif") => "image",
-
-            // audio
-            _ if file_name.ends_with(".mp3") => "audio",
-            _ if file_name.ends_with(".wav") => "audio",
-            _ if file_name.ends_with(".ogg") => "audio",
-
-            // video
-            _ if file_name.ends_with(".mp4") => "video",
-            _ if file_name.ends_with(".mkv") => "video",
-            _ if file_name.ends_with(".webm") => "video",
-
-            _ => "",
-        }
+        get_file_icon(file_name)
     } else if metadata.is_symlink() {
-        "symlink"
+        get_file_icon("symlink".to_string())
     } else {
-        "unknown"
-    })
+        get_file_icon("unknown".to_string())
+    }
+}
+
+fn get_directory_icon(dir: String) -> &'static str {
+    let mut icon = "";
+
+    let folders = config::get_folders();
+    let dir = dir.to_lowercase();
+
+    if folders.icons.contains_key(&dir) {
+        icon = folders.icons.get(&dir).unwrap().as_str().unwrap();
+    } else {
+        let alias = folders.aliases.get(&dir);
+        if alias.is_some() {
+            icon = folders.icons.get(alias.unwrap()).unwrap().as_str().unwrap();
+        }
+    }
+
+    icon
+}
+
+fn get_file_icon(file: String) -> &'static str {
+    let mut icon = "";
+
+    let files = config::get_files();
+    let file = file.to_lowercase();
+
+    let ext = file.split('.').last().unwrap();
+
+    if files.icons.contains_key(&file) {
+        icon = files.icons.get(&file).unwrap().as_str().unwrap();
+        // TODO: how to handle file.spec.ts as example?
+    } else if files.icons.contains_key(&ext) {
+        icon = files.icons.get(&ext).unwrap().as_str().unwrap();
+    } else {
+        let alias = files.aliases.get(&file);
+        if alias.is_some() {
+            icon = files.icons.get(alias.unwrap()).unwrap().as_str().unwrap();
+        }
+    }
+
+    icon
 }

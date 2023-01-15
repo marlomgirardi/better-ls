@@ -1,0 +1,4 @@
+dark:
+  unrecognized_file: [255, 200, 0]
+  recognized_file:   [215, 215, 25]
+  dir:              [0, 0, 215]
