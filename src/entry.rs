@@ -4,6 +4,7 @@ use core::str::from_utf8_unchecked;
 use libc;
 use std::ffi::CStr;
 use std::fs;
+use std::fs::DirEntry;
 use std::io;
 use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
@@ -14,8 +15,13 @@ use crate::config::DEFAULT_ICON_FILE;
 
 pub fn list_entries(path: &PathBuf) {
     // Get the contents of the directory
-    let entries = match fs::read_dir(path) {
-        Ok(entries) => entries,
+    let entries: Vec<DirEntry> = match fs::read_dir(path) {
+        Ok(entries) => {
+            // force sort like the default sort from ls command.
+            let mut entries: Vec<DirEntry> = entries.map(|entry| entry.unwrap()).collect();
+            entries.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+            entries
+        }
         Err(err) => {
             eprintln!("Error: {}", err);
             return;
@@ -24,14 +30,6 @@ pub fn list_entries(path: &PathBuf) {
 
     // Iterate over the entries and print their names and attributes
     for entry in entries {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(err) => {
-                eprintln!("Error: {}", err);
-                continue;
-            }
-        };
-
         let path = entry.path();
         let name = match path.file_name() {
             Some(name) => name,
@@ -61,7 +59,7 @@ pub fn list_entries(path: &PathBuf) {
             group,
             size,
             format_date(modified),
-            format_filename(&name.to_string_lossy(), &metadata),
+            format_name(&name.to_string_lossy(), &metadata),
         );
     }
 }
@@ -127,7 +125,7 @@ fn get_groupname(gid: u32) -> io::Result<String> {
     Ok(groupname.to_string())
 }
 
-fn format_filename(name: &str, metadata: &fs::Metadata) -> String {
+fn format_name(name: &str, metadata: &fs::Metadata) -> String {
     let colors = config::get_colors(None); // TODO: get from config?
     let mut file_name = String::from(name);
 
