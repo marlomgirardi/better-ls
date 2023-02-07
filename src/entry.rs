@@ -1,128 +1,53 @@
-use chrono::prelude::{DateTime, Local};
 use colored::*;
-use core::str::from_utf8_unchecked;
-use libc;
-use std::ffi::CStr;
 use std::fs;
-use std::fs::DirEntry;
 use std::io;
-use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
-use std::time::SystemTime;
 
+use crate::cli::Args;
 use crate::config;
 use crate::config::DEFAULT_ICON_FILE;
+use crate::exit_codes;
+use crate::list::Entry;
 
-pub fn list_entries(path: &PathBuf) {
+pub fn list_entries(path: &PathBuf, args: &Args) {
     // Get the contents of the directory
-    let entries: Vec<DirEntry> = match fs::read_dir(path) {
-        Ok(entries) => {
-            // force sort like the default sort from ls command.
-            let mut entries: Vec<DirEntry> = entries.map(|entry| entry.unwrap()).collect();
-            entries.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
-            entries
-        }
+    let mut entries = match get_entries(&path) {
+        Ok(entries) => entries,
         Err(err) => {
+            // TODO: handle error
             eprintln!("Error: {}", err);
             return;
         }
     };
 
+    if args.all {
+        // TODO: handle error form unwrap
+        entries.push(Entry {
+            name: String::from("."),
+            path: path.clone(),
+            metadata: fs::metadata(".").unwrap(),
+        });
+        entries.push(Entry {
+            name: String::from(".."),
+            path: path.clone().parent().unwrap().to_path_buf(),
+            metadata: fs::metadata("..").unwrap(),
+        });
+    }
+
+    if !args.all && !args.almost_all {
+        filter_entries(&mut entries);
+    }
+
+    sort_entries(&mut entries);
+
     // Iterate over the entries and print their names and attributes
     for entry in entries {
-        let path = entry.path();
-        let name = match path.file_name() {
-            Some(name) => name,
-            None => continue,
-        };
+        let metadata = entry.metadata;
 
-        let metadata = match entry.metadata() {
-            Ok(metadata) => metadata,
-            Err(err) => {
-                eprintln!("Error: {}", err);
-                continue;
-            }
-        };
-
-        let permissions = metadata.mode();
-        let link_count = metadata.nlink();
-        let size = metadata.len();
-        let modified = metadata.modified().unwrap();
-        let owner = get_username(metadata.uid()).unwrap();
-        let group = get_groupname(metadata.gid()).unwrap();
-
-        println!(
-            "{:>10} {:>5} {:>10} {:>10} {:>10} {:>10}   {}",
-            format_permissions(permissions),
-            link_count,
-            owner,
-            group,
-            size,
-            format_date(modified),
-            format_name(&name.to_string_lossy(), &metadata),
-        );
+        // TODO: break line based on terminal width
+        print!("      {}", format_name(&entry.name, &metadata));
     }
-}
-
-fn format_permissions(permissions: u32) -> String {
-    let mut output = String::new();
-
-    // user permissions
-    output.push(if permissions & 0o400 != 0 { 'r' } else { '-' });
-    output.push(if permissions & 0o200 != 0 { 'w' } else { '-' });
-    output.push(if permissions & 0o100 != 0 { 'x' } else { '-' });
-
-    // group permissions
-    output.push(if permissions & 0o040 != 0 { 'r' } else { '-' });
-    output.push(if permissions & 0o020 != 0 { 'w' } else { '-' });
-    output.push(if permissions & 0o010 != 0 { 'x' } else { '-' });
-
-    // others permissions
-    output.push(if permissions & 0o004 != 0 { 'r' } else { '-' });
-    output.push(if permissions & 0o002 != 0 { 'w' } else { '-' });
-    output.push(if permissions & 0o001 != 0 { 'x' } else { '-' });
-
-    output
-}
-
-fn format_date(date: SystemTime) -> String {
-    let datetime: DateTime<Local> = date.into();
-    let formatted = datetime.format("%a %b %e %T %Y").to_string();
-    formatted
-}
-
-fn get_username(uid: u32) -> io::Result<String> {
-    let username = unsafe {
-        let pw = libc::getpwuid(uid);
-        let pw_str = CStr::from_ptr((*pw).pw_name);
-        from_utf8_unchecked(pw_str.to_bytes())
-    };
-
-    if username.is_empty() {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("Could not get username id {}", uid),
-        ))?
-    }
-
-    Ok(username.to_string())
-}
-
-fn get_groupname(gid: u32) -> io::Result<String> {
-    let groupname = unsafe {
-        let gr = libc::getgrgid(gid);
-        let gr_str = CStr::from_ptr((*gr).gr_name);
-        from_utf8_unchecked(gr_str.to_bytes())
-    };
-
-    if groupname.is_empty() {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("Could not get groupname id {}", gid),
-        ))?
-    }
-
-    Ok(groupname.to_string())
+    println!();
 }
 
 fn format_name(name: &str, metadata: &fs::Metadata) -> String {
@@ -145,13 +70,13 @@ fn format_name(name: &str, metadata: &fs::Metadata) -> String {
     };
 
     format!(
-        "{}   {}",
-        icon.truecolor(name_color[0], name_color[1], name_color[2],),
-        file_name.truecolor(name_color[0], name_color[1], name_color[2],)
+        "{}  {}",
+        icon.truecolor(name_color[0], name_color[1], name_color[2]),
+        file_name.truecolor(name_color[0], name_color[1], name_color[2])
     )
 }
 
-fn get_icon_from_metadata<'a>(metadata: &'a fs::Metadata, base_file_name: &'a str) -> &'a str {
+fn get_icon_from_metadata<'i>(metadata: &'i fs::Metadata, base_file_name: &'i str) -> &'i str {
     let file_name = base_file_name.to_lowercase();
 
     if metadata.is_dir() {
@@ -204,4 +129,34 @@ fn get_file_icon(file: String) -> &'static str {
     }
 
     icon
+}
+
+pub fn get_entries(path: &PathBuf) -> io::Result<Vec<Entry>> {
+    let entries = fs::read_dir(path)?
+        .map(|res| {
+            res.map(|e| match Entry::from(e) {
+                Ok(entry) => entry,
+                Err(err) => {
+                    // TODO: handle error
+                    eprintln!("Error: {}", err);
+                    // if err.kind() == io::ErrorKind::PermissionDenied {
+                    //     std::process::exit(exit_codes::PERMISSION_DENIED);
+                    // }
+                    std::process::exit(exit_codes::SERIOUS_TROUBLE);
+                }
+            })
+        })
+        .collect::<Result<Vec<_>, io::Error>>()?;
+
+    Ok(entries)
+}
+
+pub fn sort_entries(entries: &mut Vec<Entry>) -> &mut Vec<Entry> {
+    entries.sort_by(|a, b| a.name.cmp(&b.name));
+    entries
+}
+
+pub fn filter_entries(entries: &mut Vec<Entry>) -> &mut Vec<Entry> {
+    entries.retain(|entry| !entry.name.starts_with("."));
+    entries
 }

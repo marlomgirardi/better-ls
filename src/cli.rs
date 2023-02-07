@@ -7,12 +7,13 @@ use std::{env, path};
 pub struct Args {
     /// do not ignore entries starting with "."
     #[arg(short, long, default_value_t = false)]
-    all: bool,
+    pub all: bool,
 
     /// do not list implied . and ..
     #[arg(short = 'A', long, default_value_t = false)]
-    almost_all: bool,
+    pub almost_all: bool,
 
+    /// list entries by paths.
     pub paths: Vec<String>,
 }
 

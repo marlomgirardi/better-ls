@@ -21,9 +21,13 @@ If you want to check if your terminal is compatible, type `echo $COLORTERM`. If 
 
 ## TODOs
 
-- [ ] Map `ls` flags to internal.
+- [ ] Map `ls` flags.
 - [ ] Check the implications of reading from file (runtime) instead of `include_str!` (compile-time).
-- [ ] Figure it out a way to have custom colors.
+- [ ] Figure it out a way to have custom colors and add colors that looks good in all places.
+- [ ] Learn how tests on rust works
+- [ ] Refactor (because for sure I don't know what I'm doing and there is probably best practices to follow 😅)
+- [ ] Test on linux (and windows?)
+- [ ] Break line based on terminal size
 
 ### Inspired by
 
