@@ -13,6 +13,7 @@ use crate::cli::Args;
 use crate::config;
 use crate::config::DEFAULT_ICON_FILE;
 use crate::exit_codes;
+use crate::list::DetailedListOptions;
 use crate::list::Entry;
 
 pub fn list_entries(path: &PathBuf, args: &Args) {
@@ -49,8 +50,15 @@ pub fn list_entries(path: &PathBuf, args: &Args) {
     // Iterate over the entries and print their names and attributes
 
     // TODO: break line based on terminal width
-    if args.long_listing {
-        list_columns(entries);
+    let long = args.long_listing || args.long_listing_no_group || args.long_listing_no_owner;
+    if long {
+        let options = DetailedListOptions {
+            group: !(args.long_listing_no_group || args.no_group),
+            owner: !args.long_listing_no_owner,
+            ..Default::default()
+        };
+
+        list_columns(entries, options);
     } else {
         list_inline(entries);
     }
@@ -205,8 +213,9 @@ pub fn list_inline(entries: Vec<Entry>) {
     }
 }
 
-pub fn list_columns(entries: Vec<Entry>) {
+pub fn list_columns(entries: Vec<Entry>, options: DetailedListOptions) {
     for entry in entries {
+        let mut line = Vec::new();
         let permissions = entry.metadata.mode();
         let link_count = entry.metadata.nlink();
         let size = entry.metadata.len();
@@ -214,18 +223,34 @@ pub fn list_columns(entries: Vec<Entry>) {
         let owner = get_username(entry.metadata.uid()).unwrap();
         let group = get_groupname(entry.metadata.gid()).unwrap();
 
-        println!(
-            "{:>10} {:>5} {:>10} {:>10} {:>10} {:>10}   {}",
-            format_permissions(permissions),
-            link_count,
-            owner,
-            group,
-            size,
-            format_date(modified),
-            format_name(&entry.name, &entry.metadata),
-        );
+        if options.permissions {
+            line.push(format_permissions(permissions));
+        }
+
+        if options.link_count {
+            line.push(link_count.to_string());
+        }
+
+        if options.owner {
+            line.push(owner);
+        }
+
+        if options.group {
+            line.push(group);
+        }
+
+        if options.size {
+            line.push(size.to_string());
+        }
+
+        if options.modified_date {
+            line.push(format_date(modified));
+        }
+        line.push(format_name(&entry.name, &entry.metadata));
+
+        // TODO: Find a better way than using vectors. cli_table?
+        println!("{}", line.join("\t"));
     }
-    println!();
 }
 
 pub fn get_entries(path: &PathBuf) -> io::Result<Vec<Entry>> {

@@ -3,6 +3,29 @@ use std::io;
 use std::path::PathBuf;
 
 #[derive(Debug)]
+pub struct DetailedListOptions {
+    pub permissions: bool,
+    pub link_count: bool,
+    pub owner: bool,
+    pub group: bool,
+    pub size: bool,
+    pub modified_date: bool,
+}
+
+impl Default for DetailedListOptions {
+    fn default() -> Self {
+        DetailedListOptions {
+            permissions: true,
+            link_count: true,
+            owner: true,
+            group: true,
+            size: true,
+            modified_date: true,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Entry {
     pub name: String,
     pub path: PathBuf,

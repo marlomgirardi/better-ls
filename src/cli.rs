@@ -17,6 +17,18 @@ pub struct Args {
     #[arg(short, default_value_t = false)]
     pub long_listing: bool,
 
+    /// like `-l`, but do not list owner
+    #[arg(short = 'g', default_value_t = false)]
+    pub long_listing_no_owner: bool,
+
+    /// in a long listing, don't print group names
+    #[arg(short = 'G', long, default_value_t = false)]
+    pub no_group: bool,
+
+    /// like -l, but do not list group information
+    #[arg(short = 'o', default_value_t = false)]
+    pub long_listing_no_group: bool,
+
     /// list entries by paths.
     pub paths: Vec<String>,
 }
