@@ -13,6 +13,10 @@ pub struct Args {
     #[arg(short = 'A', long, default_value_t = false)]
     pub almost_all: bool,
 
+    /// use a long listing format
+    #[arg(short, default_value_t = false)]
+    pub long_listing: bool,
+
     /// list entries by paths.
     pub paths: Vec<String>,
 }

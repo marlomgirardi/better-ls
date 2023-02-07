@@ -1,7 +1,13 @@
+use chrono::prelude::{DateTime, Local};
 use colored::*;
+use core::str::from_utf8_unchecked;
+use libc;
+use std::ffi::CStr;
 use std::fs;
 use std::io;
+use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
+use std::time::SystemTime;
 
 use crate::cli::Args;
 use crate::config;
@@ -41,13 +47,74 @@ pub fn list_entries(path: &PathBuf, args: &Args) {
     sort_entries(&mut entries);
 
     // Iterate over the entries and print their names and attributes
-    for entry in entries {
-        let metadata = entry.metadata;
 
-        // TODO: break line based on terminal width
-        print!("      {}", format_name(&entry.name, &metadata));
+    // TODO: break line based on terminal width
+    if args.long_listing {
+        list_columns(entries);
+    } else {
+        list_inline(entries);
     }
-    println!();
+}
+
+fn format_permissions(permissions: u32) -> String {
+    let mut output = String::new();
+
+    // user permissions
+    output.push(if permissions & 0o400 != 0 { 'r' } else { '-' });
+    output.push(if permissions & 0o200 != 0 { 'w' } else { '-' });
+    output.push(if permissions & 0o100 != 0 { 'x' } else { '-' });
+
+    // group permissions
+    output.push(if permissions & 0o040 != 0 { 'r' } else { '-' });
+    output.push(if permissions & 0o020 != 0 { 'w' } else { '-' });
+    output.push(if permissions & 0o010 != 0 { 'x' } else { '-' });
+
+    // others permissions
+    output.push(if permissions & 0o004 != 0 { 'r' } else { '-' });
+    output.push(if permissions & 0o002 != 0 { 'w' } else { '-' });
+    output.push(if permissions & 0o001 != 0 { 'x' } else { '-' });
+
+    output
+}
+
+fn format_date(date: SystemTime) -> String {
+    let datetime: DateTime<Local> = date.into();
+    let formatted = datetime.format("%a %b %e %T %Y").to_string();
+    formatted
+}
+
+fn get_username(uid: u32) -> io::Result<String> {
+    let username = unsafe {
+        let pw = libc::getpwuid(uid);
+        let pw_str = CStr::from_ptr((*pw).pw_name);
+        from_utf8_unchecked(pw_str.to_bytes())
+    };
+
+    if username.is_empty() {
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("Could not get username id {}", uid),
+        ))?
+    }
+
+    Ok(username.to_string())
+}
+
+fn get_groupname(gid: u32) -> io::Result<String> {
+    let groupname = unsafe {
+        let gr = libc::getgrgid(gid);
+        let gr_str = CStr::from_ptr((*gr).gr_name);
+        from_utf8_unchecked(gr_str.to_bytes())
+    };
+
+    if groupname.is_empty() {
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("Could not get groupname id {}", gid),
+        ))?
+    }
+
+    Ok(groupname.to_string())
 }
 
 fn format_name(name: &str, metadata: &fs::Metadata) -> String {
@@ -129,6 +196,36 @@ fn get_file_icon(file: String) -> &'static str {
     }
 
     icon
+}
+
+pub fn list_inline(entries: Vec<Entry>) {
+    for entry in entries {
+        let metadata = entry.metadata;
+        print!("{} ", format_name(&entry.name, &metadata));
+    }
+}
+
+pub fn list_columns(entries: Vec<Entry>) {
+    for entry in entries {
+        let permissions = entry.metadata.mode();
+        let link_count = entry.metadata.nlink();
+        let size = entry.metadata.len();
+        let modified = entry.metadata.modified().unwrap();
+        let owner = get_username(entry.metadata.uid()).unwrap();
+        let group = get_groupname(entry.metadata.gid()).unwrap();
+
+        println!(
+            "{:>10} {:>5} {:>10} {:>10} {:>10} {:>10}   {}",
+            format_permissions(permissions),
+            link_count,
+            owner,
+            group,
+            size,
+            format_date(modified),
+            format_name(&entry.name, &entry.metadata),
+        );
+    }
+    println!();
 }
 
 pub fn get_entries(path: &PathBuf) -> io::Result<Vec<Entry>> {
