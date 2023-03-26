@@ -27,6 +27,10 @@ pub fn list_entries(path: &PathBuf, args: &Args) {
         }
     };
 
+    if args.directory {
+        entries.retain(|entry| entry.metadata.is_dir());
+    }
+
     if args.all {
         // TODO: handle error form unwrap
         entries.push(Entry {

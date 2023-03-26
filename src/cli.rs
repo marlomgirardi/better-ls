@@ -29,6 +29,10 @@ pub struct Args {
     #[arg(short = 'o', default_value_t = false)]
     pub long_listing_no_group: bool,
 
+    /// list directories themselves, not their contents
+    #[arg(short, long, default_value_t = false)]
+    pub directory: bool,
+
     /// list entries by paths.
     pub paths: Vec<String>,
 }
