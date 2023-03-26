@@ -1,4 +1,12 @@
+# Colors are based on truecolors. See https://gist.github.com/XVilka/8346728
+
 dark:
-  unrecognized_file: [255, 200, 0]
-  recognized_file:   [215, 215, 25]
-  dir:              [0, 0, 215]
+  unrecognized_file: [238, 158, 66]
+  recognized_file:   [231, 220, 125]
+  dir:               [76, 165, 255]
+
+  # Permissions
+  read:      [93, 217, 104]
+  write:     [217, 213, 93]
+  exec:      [217, 104, 93]
+  no_access: [235, 184, 142]

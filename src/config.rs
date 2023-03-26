@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{fs::File, path::PathBuf};
 
 use lazy_static::lazy_static;
 use serde::Deserialize;
@@ -24,6 +24,10 @@ pub struct ColorScheme {
     pub dir: RGB,
     pub recognized_file: RGB,
     pub unrecognized_file: RGB,
+    pub read: RGB,
+    pub write: RGB,
+    pub exec: RGB,
+    pub no_access: RGB,
 }
 
 lazy_static! {
@@ -59,7 +63,19 @@ fn get_config_file<YamlType>(path: &str) -> YamlType
 where
     YamlType: for<'de> Deserialize<'de>,
 {
-    let file = File::open(path).unwrap();
+    let full_path = get_project_root_dir().join(path);
+    let file = File::open(full_path).unwrap();
     let folders: YamlType = serde_yaml::from_reader(file).unwrap();
     folders
+}
+
+/// Get the root directory of the project.
+/// Required mainly when running within one of the directories of the project.
+fn get_project_root_dir() -> PathBuf {
+    let current_dir = std::env::current_dir().unwrap();
+    current_dir
+        .ancestors()
+        .find(|dir| dir.join("Cargo.toml").exists())
+        .unwrap()
+        .to_path_buf()
 }

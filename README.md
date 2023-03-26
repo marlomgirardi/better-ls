@@ -2,6 +2,10 @@
 
 We use icons from [NerdFonts](https://www.nerdfonts.com/cheat-sheet)
 
+This is compatible only with terminals that support `truecolor`.
+
+Type `echo $COLORTERM` in your terminal, if the result is `truecolor` you are good to go!
+
 ## How-to
 
 ### Add icons
@@ -16,8 +20,6 @@ Under config there is two files, `folders.yml` and `files.yml`. Both are used to
 Under config you will find `colors.yml` containing `dark` and `light` both will have the same mapping for its variant.
 
 We use [colored](https://docs.rs/colored/2.0.0/colored/) for the colors with the `true-color` standard, so the mapping will be to RGB.
-
-If you want to check if your terminal is compatible, type `echo $COLORTERM`. If the return is `truecolor` you are all set.
 
 ## TODOs
 

@@ -65,24 +65,70 @@ pub fn list_entries(path: &PathBuf, args: &Args) {
 }
 
 fn format_permissions(permissions: u32) -> String {
-    let mut output = String::new();
+    let user = format!(
+        "{}{}{}",
+        colorize_read(permissions & 0o400 != 0),
+        colorize_write(permissions & 0o200 != 0),
+        colorize_exec(permissions & 0o100 != 0)
+    );
 
-    // user permissions
-    output.push(if permissions & 0o400 != 0 { 'r' } else { '-' });
-    output.push(if permissions & 0o200 != 0 { 'w' } else { '-' });
-    output.push(if permissions & 0o100 != 0 { 'x' } else { '-' });
+    let group = format!(
+        "{}{}{}",
+        colorize_read(permissions & 0o040 != 0),
+        colorize_write(permissions & 0o020 != 0),
+        colorize_exec(permissions & 0o010 != 0)
+    );
 
-    // group permissions
-    output.push(if permissions & 0o040 != 0 { 'r' } else { '-' });
-    output.push(if permissions & 0o020 != 0 { 'w' } else { '-' });
-    output.push(if permissions & 0o010 != 0 { 'x' } else { '-' });
+    let others = format!(
+        "{}{}{}",
+        colorize_read(permissions & 0o004 != 0),
+        colorize_write(permissions & 0o002 != 0),
+        colorize_exec(permissions & 0o001 != 0)
+    );
 
-    // others permissions
-    output.push(if permissions & 0o004 != 0 { 'r' } else { '-' });
-    output.push(if permissions & 0o002 != 0 { 'w' } else { '-' });
-    output.push(if permissions & 0o001 != 0 { 'x' } else { '-' });
+    format!("{}{}{}", user, group, others)
+}
 
-    output
+fn colorize_read(read: bool) -> ColoredString {
+    let colors = config::get_colors(None); // TODO: get from config?
+
+    if read {
+        "r".truecolor(colors.read[0], colors.read[1], colors.read[2])
+    } else {
+        "-".truecolor(
+            colors.no_access[0],
+            colors.no_access[1],
+            colors.no_access[2],
+        )
+    }
+}
+
+fn colorize_write(write: bool) -> ColoredString {
+    let colors = config::get_colors(None); // TODO: get from config?
+
+    if write {
+        "w".truecolor(colors.write[0], colors.write[1], colors.write[2])
+    } else {
+        "-".truecolor(
+            colors.no_access[0],
+            colors.no_access[1],
+            colors.no_access[2],
+        )
+    }
+}
+
+fn colorize_exec(exec: bool) -> ColoredString {
+    let colors = config::get_colors(None); // TODO: get from config?
+
+    if exec {
+        "x".truecolor(colors.exec[0], colors.exec[1], colors.exec[2])
+    } else {
+        "-".truecolor(
+            colors.no_access[0],
+            colors.no_access[1],
+            colors.no_access[2],
+        )
+    }
 }
 
 fn format_date(date: SystemTime) -> String {
