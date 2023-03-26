@@ -29,6 +29,8 @@ pub fn list_entries(path: &PathBuf, args: &Args) {
 
     if args.directory {
         entries.retain(|entry| entry.metadata.is_dir());
+    } else if args.files_only {
+        entries.retain(|entry| entry.metadata.is_file());
     }
 
     if args.all {

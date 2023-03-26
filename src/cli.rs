@@ -33,6 +33,10 @@ pub struct Args {
     #[arg(short, long, default_value_t = false)]
     pub directory: bool,
 
+    /// list all entries in directory order
+    #[arg(short, default_value_t = false)]
+    pub files_only: bool,
+
     /// list entries by paths.
     pub paths: Vec<String>,
 }
