@@ -10,7 +10,9 @@ use std::path::PathBuf;
 use std::time::SystemTime;
 
 use crate::cli::Args;
+use crate::cli::ArgsSteroids;
 use crate::config;
+use crate::config::ColorScheme;
 use crate::config::DEFAULT_ICON_FILE;
 use crate::exit_codes;
 use crate::list::DetailedListOptions;
@@ -47,57 +49,54 @@ pub fn list_entries(path: &PathBuf, args: &Args) {
         });
     }
 
-    if !args.all && !args.almost_all {
-        filter_entries(&mut entries);
+    if !args.show_dot_files() {
+        entries.retain(|entry| !entry.name.starts_with("."))
     }
 
-    sort_entries(&mut entries);
+    entries.sort_by(|a, b| a.name.cmp(&b.name));
 
     // Iterate over the entries and print their names and attributes
 
     // TODO: break line based on terminal width
-    let long = args.long_listing || args.long_listing_no_group || args.long_listing_no_owner;
-    if long {
+    if args.is_long_listing() {
         let options = DetailedListOptions {
-            group: !(args.long_listing_no_group || args.no_group),
+            group: args.show_group(),
             owner: !args.long_listing_no_owner,
             ..Default::default()
         };
 
-        list_columns(entries, options);
+        list_columns(entries, options, args.get_theme());
     } else {
-        list_inline(entries);
+        list_inline(entries, args.get_theme());
     }
 }
 
-fn format_permissions(permissions: u32) -> String {
+fn format_permissions(permissions: u32, colors: &ColorScheme) -> String {
     let user = format!(
         "{}{}{}",
-        colorize_read(permissions & 0o400 != 0),
-        colorize_write(permissions & 0o200 != 0),
-        colorize_exec(permissions & 0o100 != 0)
+        colorize_read(permissions & 0o400 != 0, colors),
+        colorize_write(permissions & 0o200 != 0, colors),
+        colorize_exec(permissions & 0o100 != 0, colors)
     );
 
     let group = format!(
         "{}{}{}",
-        colorize_read(permissions & 0o040 != 0),
-        colorize_write(permissions & 0o020 != 0),
-        colorize_exec(permissions & 0o010 != 0)
+        colorize_read(permissions & 0o040 != 0, colors),
+        colorize_write(permissions & 0o020 != 0, colors),
+        colorize_exec(permissions & 0o010 != 0, colors)
     );
 
     let others = format!(
         "{}{}{}",
-        colorize_read(permissions & 0o004 != 0),
-        colorize_write(permissions & 0o002 != 0),
-        colorize_exec(permissions & 0o001 != 0)
+        colorize_read(permissions & 0o004 != 0, colors),
+        colorize_write(permissions & 0o002 != 0, colors),
+        colorize_exec(permissions & 0o001 != 0, colors)
     );
 
     format!("{}{}{}", user, group, others)
 }
 
-fn colorize_read(read: bool) -> ColoredString {
-    let colors = config::get_colors(None); // TODO: get from config?
-
+fn colorize_read(read: bool, colors: &ColorScheme) -> ColoredString {
     if read {
         "r".truecolor(colors.read[0], colors.read[1], colors.read[2])
     } else {
@@ -109,9 +108,7 @@ fn colorize_read(read: bool) -> ColoredString {
     }
 }
 
-fn colorize_write(write: bool) -> ColoredString {
-    let colors = config::get_colors(None); // TODO: get from config?
-
+fn colorize_write(write: bool, colors: &ColorScheme) -> ColoredString {
     if write {
         "w".truecolor(colors.write[0], colors.write[1], colors.write[2])
     } else {
@@ -123,9 +120,7 @@ fn colorize_write(write: bool) -> ColoredString {
     }
 }
 
-fn colorize_exec(exec: bool) -> ColoredString {
-    let colors = config::get_colors(None); // TODO: get from config?
-
+fn colorize_exec(exec: bool, colors: &ColorScheme) -> ColoredString {
     if exec {
         "x".truecolor(colors.exec[0], colors.exec[1], colors.exec[2])
     } else {
@@ -177,8 +172,7 @@ fn get_groupname(gid: u32) -> io::Result<String> {
     Ok(groupname.to_string())
 }
 
-fn format_name(name: &str, metadata: &fs::Metadata) -> String {
-    let colors = config::get_colors(None); // TODO: get from config?
+fn format_name(name: &str, metadata: &fs::Metadata, colors: &ColorScheme) -> String {
     let mut file_name = String::from(name);
 
     let icon = get_icon_from_metadata(&metadata, &name);
@@ -258,14 +252,14 @@ fn get_file_icon(file: String) -> &'static str {
     icon
 }
 
-pub fn list_inline(entries: Vec<Entry>) {
+pub fn list_inline(entries: Vec<Entry>, colors: &ColorScheme) {
     for entry in entries {
         let metadata = entry.metadata;
-        print!("{} ", format_name(&entry.name, &metadata));
+        print!("{} ", format_name(&entry.name, &metadata, &colors));
     }
 }
 
-pub fn list_columns(entries: Vec<Entry>, options: DetailedListOptions) {
+pub fn list_columns(entries: Vec<Entry>, options: DetailedListOptions, colors: &ColorScheme) {
     for entry in entries {
         let mut line = Vec::new();
         let permissions = entry.metadata.mode();
@@ -276,7 +270,7 @@ pub fn list_columns(entries: Vec<Entry>, options: DetailedListOptions) {
         let group = get_groupname(entry.metadata.gid()).unwrap();
 
         if options.permissions {
-            line.push(format_permissions(permissions));
+            line.push(format_permissions(permissions, &colors));
         }
 
         if options.link_count {
@@ -298,7 +292,7 @@ pub fn list_columns(entries: Vec<Entry>, options: DetailedListOptions) {
         if options.modified_date {
             line.push(format_date(modified));
         }
-        line.push(format_name(&entry.name, &entry.metadata));
+        line.push(format_name(&entry.name, &entry.metadata, &colors));
 
         // TODO: Find a better way than using vectors. cli_table?
         println!("{}", line.join("\t"));
@@ -323,14 +317,4 @@ pub fn get_entries(path: &PathBuf) -> io::Result<Vec<Entry>> {
         .collect::<Result<Vec<_>, io::Error>>()?;
 
     Ok(entries)
-}
-
-pub fn sort_entries(entries: &mut Vec<Entry>) -> &mut Vec<Entry> {
-    entries.sort_by(|a, b| a.name.cmp(&b.name));
-    entries
-}
-
-pub fn filter_entries(entries: &mut Vec<Entry>) -> &mut Vec<Entry> {
-    entries.retain(|entry| !entry.name.starts_with("."));
-    entries
 }

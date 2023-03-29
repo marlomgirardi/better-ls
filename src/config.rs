@@ -42,11 +42,16 @@ lazy_static! {
 pub const DEFAULT_ICON_DIR: &str = "";
 pub const DEFAULT_ICON_FILE: &str = "";
 
-pub fn get_colors(schema: Option<&str>) -> &'static ColorScheme {
+pub enum Theme {
+    Dark,
+    Light,
+}
+
+pub fn get_colors(theme: Theme) -> &'static ColorScheme {
     let colors = &*COLORS;
-    match schema.unwrap_or_default() {
-        "dark" => &colors.dark,
-        // "light" => &colors.light,
+    match theme {
+        Theme::Dark => &colors.dark,
+        // Theme::Light => &colors.light,
         _ => &colors.dark,
     }
 }
