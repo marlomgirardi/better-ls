@@ -1,5 +1,4 @@
 use std::fs::Metadata;
-use std::io;
 use std::path::PathBuf;
 
 #[derive(Debug)]
@@ -31,6 +30,19 @@ pub struct Entry {
     pub path: PathBuf,
     pub metadata: Metadata,
 }
+
+impl TryFrom<std::fs::DirEntry> for Entry {
+    type Error = std::io::Error;
+
+    // TODO: this requires better error handling.
+    fn try_from(entry: std::fs::DirEntry) -> Result<Self, Self::Error> {
+        let name = entry.file_name().into_string().unwrap(); // use anyhow?
+        let path = entry.path();
+        let metadata = entry.metadata()?;
+        Ok(Entry::new(name, path, metadata))
+    }
+}
+
 impl Entry {
     pub fn new(name: String, path: PathBuf, metadata: Metadata) -> Entry {
         Entry {
@@ -38,12 +50,5 @@ impl Entry {
             path,
             metadata,
         }
-    }
-
-    pub fn from(entry: std::fs::DirEntry) -> io::Result<Entry> {
-        let name = entry.file_name().into_string().unwrap();
-        let path = entry.path();
-        let metadata = entry.metadata()?;
-        Ok(Entry::new(name, path, metadata))
     }
 }

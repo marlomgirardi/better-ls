@@ -1,7 +1,7 @@
 mod cli;
 mod config;
 mod entry;
-mod exit_codes;
+mod errors;
 mod list;
 
 use clap::Parser;

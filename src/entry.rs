@@ -1,7 +1,6 @@
 use chrono::prelude::{DateTime, Local};
 use colored::*;
 use core::str::from_utf8_unchecked;
-use libc;
 use std::ffi::CStr;
 use std::fs;
 use std::io;
@@ -14,7 +13,7 @@ use crate::cli::ArgsSteroids;
 use crate::config;
 use crate::config::ColorScheme;
 use crate::config::DEFAULT_ICON_FILE;
-use crate::exit_codes;
+use crate::errors;
 use crate::list::DetailedListOptions;
 use crate::list::Entry;
 
@@ -240,8 +239,8 @@ fn get_file_icon(file: String) -> &'static str {
     if files.icons.contains_key(&file) {
         icon = files.icons.get(&file).unwrap().as_str().unwrap();
         // TODO: how to handle file.spec.ts as example?
-    } else if files.icons.contains_key(&ext) {
-        icon = files.icons.get(&ext).unwrap().as_str().unwrap();
+    } else if files.icons.contains_key(ext) {
+        icon = files.icons.get(ext).unwrap().as_str().unwrap();
     } else {
         let alias = files.aliases.get(&file);
         if alias.is_some() {
@@ -253,10 +252,11 @@ fn get_file_icon(file: String) -> &'static str {
 }
 
 pub fn list_inline(entries: Vec<Entry>, colors: &ColorScheme) {
-    for entry in entries {
-        let metadata = entry.metadata;
-        print!("{} ", format_name(&entry.name, &metadata, &colors));
-    }
+    let list = entries
+        .iter()
+        .map(|entry| format_name(&entry.name, &entry.metadata, colors))
+        .collect::<Vec<_>>();
+    println!("{}", list.join("     "));
 }
 
 pub fn list_columns(entries: Vec<Entry>, options: DetailedListOptions, colors: &ColorScheme) {
@@ -270,7 +270,7 @@ pub fn list_columns(entries: Vec<Entry>, options: DetailedListOptions, colors: &
         let group = get_groupname(entry.metadata.gid()).unwrap();
 
         if options.permissions {
-            line.push(format_permissions(permissions, &colors));
+            line.push(format_permissions(permissions, colors));
         }
 
         if options.link_count {
@@ -292,7 +292,7 @@ pub fn list_columns(entries: Vec<Entry>, options: DetailedListOptions, colors: &
         if options.modified_date {
             line.push(format_date(modified));
         }
-        line.push(format_name(&entry.name, &entry.metadata, &colors));
+        line.push(format_name(&entry.name, &entry.metadata, colors));
 
         // TODO: Find a better way than using vectors. cli_table?
         println!("{}", line.join("\t"));
@@ -302,15 +302,15 @@ pub fn list_columns(entries: Vec<Entry>, options: DetailedListOptions, colors: &
 pub fn get_entries(path: &PathBuf) -> io::Result<Vec<Entry>> {
     let entries = fs::read_dir(path)?
         .map(|res| {
-            res.map(|e| match Entry::from(e) {
+            res.map(|e| match e.try_into() {
                 Ok(entry) => entry,
                 Err(err) => {
                     // TODO: handle error
                     eprintln!("Error: {}", err);
                     // if err.kind() == io::ErrorKind::PermissionDenied {
-                    //     std::process::exit(exit_codes::PERMISSION_DENIED);
+                    //     std::process::exit(errors::PERMISSION_DENIED);
                     // }
-                    std::process::exit(exit_codes::SERIOUS_TROUBLE);
+                    std::process::exit(errors::SERIOUS_TROUBLE);
                 }
             })
         })
