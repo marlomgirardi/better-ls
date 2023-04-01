@@ -11,10 +11,25 @@ fn main() {
     #[cfg(unix)]
     {
         let args = cli::Args::parse();
-        let mut paths: Vec<PathBuf> = args.paths.iter().map(|s| s.into()).collect();
+        let paths: Vec<PathBuf>;
 
-        if paths.is_empty() {
-            paths.push(cli::get_current_dir());
+        if args.paths.is_empty() {
+            paths = vec![cli::get_current_dir()];
+        } else {
+            paths = args
+                .paths
+                .iter()
+                .filter_map(|path_arg| {
+                    let path = PathBuf::from(path_arg);
+                    if path.exists() {
+                        Some(path)
+                    } else {
+                        // TODO: think about these errors.
+                        eprintln!("Specified path {} doesn't exist.", path.display());
+                        None
+                    }
+                })
+                .collect();
         }
 
         // TODO: handle multiple paths
