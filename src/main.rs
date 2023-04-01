@@ -5,6 +5,7 @@ mod errors;
 mod list;
 
 use clap::Parser;
+use colored::Colorize;
 use std::path::PathBuf;
 
 fn main() {
@@ -25,15 +26,25 @@ fn main() {
                         Some(path)
                     } else {
                         // TODO: think about these errors.
-                        eprintln!("Specified path {} doesn't exist.", path.display());
+                        let msg = format!("Specified path {} doesn't exist.", path.display());
+                        eprintln!("{}", msg.red());
                         None
                     }
                 })
                 .collect();
         }
 
-        // TODO: handle multiple paths
-        entry::list_entries(&paths[0], &args);
+        paths.iter().for_each(|path| {
+            if path.is_dir() {
+                if paths.len() > 1 {
+                    println!("{}:", path.display())
+                }
+                entry::list_entries(path, &args);
+            } else {
+                // TODO: this is also valid, implement later?
+                // Maybe filter first to group file paths first before listing paths?
+            }
+        });
     }
 
     // TODO: learn a bit more about how the cfg attribute works
