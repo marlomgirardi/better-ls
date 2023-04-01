@@ -23,13 +23,10 @@ We use [colored](https://docs.rs/colored/2.0.0/colored/) for the colors with the
 
 ## TODOs
 
-- [ ] Map `ls` flags.
-- [ ] Check the implications of reading from file (runtime) instead of `include_str!` (compile-time).
-- [ ] Figure it out a way to have custom colors and add colors that looks good in all places.
-- [ ] Learn how tests on rust works
-- [ ] Refactor (because for sure I don't know what I'm doing and there is probably best practices to follow 😅)
-- [ ] Test on linux (and windows?)
-- [ ] Break line based on terminal size
+There are two boards:
+
+- [Flags](https://github.com/users/marlomgirardi/projects/3/views/1) - Flags to be implemented (probably will stick with the ones I use the most for now.)
+- [Improvements](https://github.com/users/marlomgirardi/projects/4/views/1) - Things that can be done better.
 
 ### Inspired by
 
