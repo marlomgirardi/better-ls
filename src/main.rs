@@ -1,3 +1,4 @@
+mod beautify;
 mod cli;
 mod config;
 mod entry;
@@ -6,7 +7,10 @@ mod list;
 
 use clap::Parser;
 use colored::Colorize;
+use list::create_list;
 use std::path::PathBuf;
+
+use crate::cli::ArgsSteroids;
 
 fn main() {
     #[cfg(unix)]
@@ -34,12 +38,16 @@ fn main() {
                 .collect();
         }
 
+        println!("");
+
+        let colors = args.get_theme();
         paths.iter().for_each(|path| {
-            if path.is_dir() {
-                if paths.len() > 1 {
-                    println!("{}:", path.display())
+            let full_path = path.canonicalize().unwrap();
+            if full_path.is_dir() {
+                if args.paths.len() > 1 {
+                    println!("{}:", full_path.display())
                 }
-                entry::list_entries(path, &args);
+                create_list(full_path, &args).print(colors);
             } else {
                 // TODO: this is also valid, implement later?
                 // Maybe filter first to group file paths first before listing paths?

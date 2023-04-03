@@ -1,5 +1,52 @@
-use std::fs::Metadata;
-use std::path::PathBuf;
+use std::{os::unix::prelude::MetadataExt, path::PathBuf};
+
+use crate::{
+    beautify::{format_date, format_permissions, get_group, get_owner},
+    cli::{Args, ArgsSteroids},
+    config::ColorScheme,
+    entry::{get_filtered_entries, Entry},
+};
+
+pub trait List {
+    fn print(&self, colors: &ColorScheme);
+}
+
+/// An inline list of entries, just icons and names.
+#[derive(Debug)]
+pub struct InlineList {
+    entries: Vec<Entry>,
+}
+
+impl InlineList {
+    pub fn new(entries: Vec<Entry>) -> Self {
+        Self { entries }
+    }
+}
+
+impl List for InlineList {
+    fn print(&self, _: &ColorScheme) {
+        let list = self
+            .entries
+            .iter()
+            .map(|entry| entry.display())
+            .collect::<Vec<_>>();
+
+        println!("{}", list.join("     "));
+    }
+}
+
+/// A detailed list of entries being one per line, with icons, names, sizes, permissions, etc.
+#[derive(Debug)]
+pub struct DetailedList {
+    options: DetailedListOptions,
+    entries: Vec<Entry>,
+}
+
+impl DetailedList {
+    pub fn new(entries: Vec<Entry>, options: DetailedListOptions) -> Self {
+        Self { entries, options }
+    }
+}
 
 #[derive(Debug)]
 pub struct DetailedListOptions {
@@ -24,31 +71,62 @@ impl Default for DetailedListOptions {
     }
 }
 
-#[derive(Debug)]
-pub struct Entry {
-    pub name: String,
-    pub path: PathBuf,
-    pub metadata: Metadata,
-}
+impl List for DetailedList {
+    fn print(&self, colors: &ColorScheme) {
+        for entry in &self.entries {
+            let mut line: Vec<String> = Vec::new();
 
-impl TryFrom<std::fs::DirEntry> for Entry {
-    type Error = std::io::Error;
+            if self.options.permissions {
+                let permissions = entry.metadata.mode();
+                line.push(format_permissions(permissions, colors));
+            }
 
-    // TODO: this requires better error handling.
-    fn try_from(entry: std::fs::DirEntry) -> Result<Self, Self::Error> {
-        let name = entry.file_name().into_string().unwrap(); // use anyhow?
-        let path = entry.path();
-        let metadata = entry.metadata()?;
-        Ok(Entry::new(name, path, metadata))
+            if self.options.link_count {
+                let link_count = entry.metadata.nlink();
+                line.push(link_count.to_string());
+            }
+
+            if self.options.owner {
+                let owner = get_owner(entry.metadata.uid()).unwrap();
+                line.push(owner);
+            }
+
+            if self.options.group {
+                let group = get_group(entry.metadata.gid()).unwrap();
+                line.push(group);
+            }
+
+            if self.options.size {
+                let size = entry.metadata.len();
+                line.push(size.to_string());
+            }
+
+            if self.options.modified_date {
+                let modified = entry.metadata.modified().unwrap();
+                line.push(format_date(modified));
+            }
+
+            line.push(entry.display());
+
+            // TODO: Find a better way than using vectors. cli_table?
+            println!("{}", line.join("\t"));
+        }
     }
 }
 
-impl Entry {
-    pub fn new(name: String, path: PathBuf, metadata: Metadata) -> Entry {
-        Entry {
-            name,
-            path,
-            metadata,
-        }
+pub fn create_list(path: PathBuf, args: &Args) -> Box<dyn List> {
+    let mut entries = get_filtered_entries(&path, &args);
+
+    entries.sort_by(|a, b| a.name.cmp(&b.name));
+
+    if args.is_long_listing() {
+        let options = DetailedListOptions {
+            group: args.show_group(),
+            owner: !args.long_listing_no_owner,
+            ..Default::default()
+        };
+        Box::new(DetailedList::new(entries, options))
+    } else {
+        Box::new(InlineList::new(entries))
     }
 }

@@ -1,5 +1,6 @@
 use clap::Parser;
-use std::{env, path};
+use std::{env, path::PathBuf};
+// use std::{env, path};
 
 use crate::config::{get_colors, ColorScheme, Theme};
 
@@ -59,18 +60,21 @@ impl ArgsSteroids for Args {
     fn is_long_listing(&self) -> bool {
         self.long_listing || self.long_listing_no_group || self.long_listing_no_owner
     }
+
     fn show_group(&self) -> bool {
         !(self.long_listing_no_group || self.no_group)
     }
+
     fn show_dot_files(&self) -> bool {
         self.all || self.almost_all
     }
+
     fn get_theme(&self) -> &ColorScheme {
         get_colors(if self.dark { Theme::Dark } else { Theme::Light })
     }
 }
 
-pub fn get_current_dir() -> path::PathBuf {
+pub fn get_current_dir() -> PathBuf {
     match env::current_dir() {
         Ok(dir) => dir,
         Err(e) => {

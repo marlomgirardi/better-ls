@@ -1,7 +1,6 @@
-use std::{fs::File, path::PathBuf};
-
 use lazy_static::lazy_static;
 use serde::Deserialize;
+use std::{fs::File, path::PathBuf};
 
 /// IconMapping is used to map icons and alias to files and directories.
 #[derive(Debug, Deserialize)]
@@ -34,13 +33,13 @@ lazy_static! {
     #[derive(Debug)]
     pub static ref COLORS: Colors = get_config_file("config/colors.yml");
     #[derive(Debug)]
-    pub static ref FOLDERS: IconMapping = get_config_file("config/folders.yml");
+    pub static ref FOLDER_ICONS: IconMapping = get_config_file("config/folders.yml");
     #[derive(Debug)]
-    pub static ref FILES: IconMapping = get_config_file("config/files.yml");
+    pub static ref FILE_ICONS: IconMapping = get_config_file("config/files.yml");
 }
 
-pub const DEFAULT_ICON_DIR: &str = "";
-pub const DEFAULT_ICON_FILE: &str = "";
+pub const DEFAULT_DIR_ICON: &str = "";
+pub const DEFAULT_FILE_ICON: &str = "";
 
 pub enum Theme {
     Dark,
@@ -56,12 +55,12 @@ pub fn get_colors(theme: Theme) -> &'static ColorScheme {
     }
 }
 
-pub fn get_folders() -> &'static IconMapping {
-    &*FOLDERS
+pub fn get_folder_icons() -> &'static IconMapping {
+    &*FOLDER_ICONS
 }
 
-pub fn get_files() -> &'static IconMapping {
-    &*FILES
+pub fn get_file_icons() -> &'static IconMapping {
+    &*FILE_ICONS
 }
 
 fn get_config_file<YamlType>(path: &str) -> YamlType
