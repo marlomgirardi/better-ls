@@ -5,21 +5,19 @@ use colored::{ColoredString, Colorize};
 
 use crate::config::{self, ColorScheme};
 
-pub fn get_icon_from_metadata(metadata: &Metadata, base_file_name: &String) -> String {
-    let file_name = base_file_name.to_lowercase();
-
+pub fn get_icon_from_metadata(metadata: &Metadata, file_name: &String) -> String {
     if metadata.is_dir() {
         get_directory_icon(file_name)
     } else if metadata.is_file() {
         get_file_icon(file_name)
     } else if metadata.is_symlink() {
-        get_file_icon("symlink".to_string())
+        get_file_icon(&"symlink".to_string())
     } else {
-        get_file_icon("unknown".to_string())
+        get_file_icon(&"unknown".to_string())
     }
 }
 
-fn get_directory_icon(dir: String) -> String {
+fn get_directory_icon(dir: &String) -> String {
     let mut icon = config::DEFAULT_DIR_ICON;
 
     let folders = config::get_folder_icons();
@@ -37,21 +35,22 @@ fn get_directory_icon(dir: String) -> String {
     icon.to_string()
 }
 
-fn get_file_icon(file: String) -> String {
+fn get_file_icon(file: &String) -> String {
     let mut icon = config::DEFAULT_FILE_ICON;
-
     let file_icons = config::get_file_icons();
-    let file = file.to_lowercase();
-
-    let ext = file.split('.').last().unwrap();
+    let ext = file.split('.').last().unwrap().to_lowercase();
 
     if file_icons.icons.contains_key(&file) {
         icon = file_icons.icons.get(&file).unwrap().as_str().unwrap();
         // TODO: how to handle file.spec.ts as example?
-    } else if file_icons.icons.contains_key(ext) {
+    } else if file_icons.icons.contains_key(&ext) {
         icon = file_icons.icons.get(ext).unwrap().as_str().unwrap();
     } else {
-        let alias = file_icons.aliases.get(&file);
+        let mut alias = file_icons.aliases.get(&file);
+        if alias.is_none() {
+            alias = file_icons.aliases.get(ext);
+        }
+
         if alias.is_some() {
             icon = file_icons
                 .icons
