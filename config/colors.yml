@@ -4,6 +4,7 @@
 dark:
   unrecognized_file: [238, 158, 66]
   recognized_file:   [231, 220, 125]
+  executable_file:   [15, 243, 11]
   dir:               [76, 165, 255]
 
   # Permissions

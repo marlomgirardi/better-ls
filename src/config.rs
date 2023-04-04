@@ -23,6 +23,7 @@ pub struct ColorScheme {
     pub dir: RGB,
     pub recognized_file: RGB,
     pub unrecognized_file: RGB,
+    pub executable_file: RGB,
     pub read: RGB,
     pub write: RGB,
     pub exec: RGB,

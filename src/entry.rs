@@ -2,6 +2,7 @@ use colored::Colorize;
 use std::{
     fs::{self, Metadata},
     io,
+    os::unix::prelude::PermissionsExt,
     path::PathBuf,
 };
 
@@ -37,6 +38,8 @@ impl Entry {
 
         let color = if metadata.is_dir() {
             colors.dir
+        } else if (metadata.permissions().mode() & 0o100) == 0o100 {
+            colors.executable_file
         } else if metadata.is_file() {
             if icon == DEFAULT_FILE_ICON {
                 colors.unrecognized_file
