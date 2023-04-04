@@ -121,6 +121,11 @@ pub fn get_filtered_entries(path: &PathBuf, args: &Args) -> Vec<Entry> {
     let mut entries = match entries_from_path(path, args) {
         Ok(entries) => entries,
         Err(err) => {
+            if err.kind() == io::ErrorKind::PermissionDenied {
+                let msg = format!("{}: {}", "Permission denied", path.display()).red();
+                eprintln!("{}", msg);
+                std::process::exit(err.raw_os_error().unwrap_or(1));
+            }
             // TODO: handle error
             panic!("Error: {}", err);
         }

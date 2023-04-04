@@ -30,7 +30,7 @@ fn main() {
                         Some(path)
                     } else {
                         // TODO: think about these errors.
-                        let msg = format!("Specified path {} doesn't exist.", path.display());
+                        let msg = format!("Path doesn't exist: {}", path.display());
                         eprintln!("{}", msg.red());
                         None
                     }
@@ -45,7 +45,7 @@ fn main() {
             let full_path = path.canonicalize().unwrap();
             if full_path.is_dir() {
                 if args.paths.len() > 1 {
-                    println!("{}:", full_path.display())
+                    println!("{}:", path.display());
                 }
                 create_list(full_path, &args).print(colors);
             } else {
