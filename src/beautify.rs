@@ -1,4 +1,4 @@
-use std::{ffi::CStr, fs::Metadata, io, str::from_utf8_unchecked, time::SystemTime};
+use std::{ffi::CStr, fs::Metadata, io, time::SystemTime};
 
 use chrono::{DateTime, Local};
 use colored::{ColoredString, Colorize};
@@ -126,11 +126,17 @@ fn colorize_exec(exec: bool, colors: &ColorScheme) -> ColoredString {
 }
 
 pub fn get_owner(uid: u32) -> io::Result<String> {
-    let username = unsafe {
-        let pw = libc::getpwuid(uid);
-        let pw_str = CStr::from_ptr((*pw).pw_name);
-        from_utf8_unchecked(pw_str.to_bytes())
-    };
+    let pw = unsafe { libc::getpwuid(uid) };
+
+    if pw.is_null() {
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("uid reference for {} is null", uid),
+        ))?
+    }
+
+    let pw_str = unsafe { CStr::from_ptr((*pw).pw_name) };
+    let username = pw_str.to_string_lossy().to_string();
 
     if username.is_empty() {
         Err(io::Error::new(
@@ -139,15 +145,21 @@ pub fn get_owner(uid: u32) -> io::Result<String> {
         ))?
     }
 
-    Ok(username.to_string())
+    Ok(username)
 }
 
 pub fn get_group(gid: u32) -> io::Result<String> {
-    let groupname = unsafe {
-        let gr = libc::getgrgid(gid);
-        let gr_str = CStr::from_ptr((*gr).gr_name);
-        from_utf8_unchecked(gr_str.to_bytes())
-    };
+    let gr = unsafe { libc::getgrgid(gid) };
+
+    if gr.is_null() {
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("Group reference for {} is null", gid),
+        ))?
+    }
+
+    let gr_str = unsafe { CStr::from_ptr((*gr).gr_name) };
+    let groupname = gr_str.to_string_lossy().to_string();
 
     if groupname.is_empty() {
         Err(io::Error::new(
