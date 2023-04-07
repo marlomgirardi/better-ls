@@ -1,7 +1,6 @@
 use colored::Colorize;
 use std::{
     fs::{self, Metadata},
-    io,
     os::unix::prelude::PermissionsExt,
     path::PathBuf,
 };
@@ -10,7 +9,7 @@ use crate::{
     beautify::get_icon_from_metadata,
     cli::{Args, ArgsSteroids},
     config::{ColorScheme, DEFAULT_FILE_ICON, RGB},
-    errors,
+    errors::{exhaustive_io_error_mapping, BetterLsError},
 };
 
 #[derive(Debug)]
@@ -27,12 +26,15 @@ impl Entry {
         path: PathBuf,
         alias: Option<String>,
         colors: &ColorScheme,
-    ) -> Result<Self, io::Error> {
-        let file_name: String = match path.file_name() {
+    ) -> Result<Self, BetterLsError> {
+        let file_name = match path.file_name() {
             Some(name) => name.to_string_lossy().to_string(),
             None => todo!("Handle this case"),
         };
-        let metadata = path.metadata()?;
+        let metadata = match path.metadata() {
+            Ok(metadata) => metadata,
+            Err(err) => return Err(exhaustive_io_error_mapping(err, file_name)),
+        };
         let icon = get_icon_from_metadata(&metadata, &file_name);
         let name = alias.unwrap_or(file_name);
 
@@ -57,7 +59,7 @@ impl Entry {
         current_path: PathBuf,
         level: u8,
         colors: &ColorScheme,
-    ) -> Result<Self, io::Error> {
+    ) -> Result<Self, BetterLsError> {
         let mut parent_path: PathBuf = current_path;
         let mut name = String::from(".");
 
@@ -94,42 +96,35 @@ impl Entry {
 
 // TODO: This in two functions looks nasty
 /// Returns a vector of entries from a given path.
-fn entries_from_path(path: &PathBuf, args: &Args) -> io::Result<Vec<Entry>> {
+fn entries_from_path(path: &PathBuf, args: &Args) -> Result<Vec<Entry>, BetterLsError> {
     let theme = args.get_theme();
 
-    let entries = fs::read_dir(path)?
-        .map(|res| {
-            res.map(|dir| match Entry::from_path(dir.path(), None, theme) {
-                Ok(entry) => entry,
-                Err(err) => {
-                    // TODO: handle error
-                    eprintln!("Error: {}", err);
-                    // if err.kind() == io::ErrorKind::PermissionDenied {
-                    //     std::process::exit(errors::PERMISSION_DENIED);
-                    // }
-                    std::process::exit(errors::SERIOUS_TROUBLE);
-                }
-            })
-        })
-        .collect::<Result<Vec<_>, io::Error>>()?;
+    let read_dir = match fs::read_dir(path) {
+        Ok(dir) => dir,
+        Err(err) => {
+            return Err(exhaustive_io_error_mapping(
+                err,
+                path.to_string_lossy().to_string(),
+            ));
+        }
+    };
 
-    Ok(entries)
+    let entries = read_dir
+        .map(|dir| match dir {
+            Ok(dir) => Entry::from_path(dir.path(), None, theme),
+            Err(err) => {
+                // At this point we know it is not permission denied as we already checked that.
+                return Err(BetterLsError::Unknown(err));
+            }
+        })
+        .collect::<Result<Vec<_>, _>>();
+
+    entries
 }
 
 /// Generic filtering of entries based on arguments.
-pub fn get_filtered_entries(path: &PathBuf, args: &Args) -> Vec<Entry> {
-    let mut entries = match entries_from_path(path, args) {
-        Ok(entries) => entries,
-        Err(err) => {
-            if err.kind() == io::ErrorKind::PermissionDenied {
-                let msg = format!("{}: {}", "Permission denied", path.display()).red();
-                eprintln!("{}", msg);
-                std::process::exit(err.raw_os_error().unwrap_or(1));
-            }
-            // TODO: handle error
-            panic!("Error: {}", err);
-        }
-    };
+pub fn get_filtered_entries(path: &PathBuf, args: &Args) -> Result<Vec<Entry>, BetterLsError> {
+    let mut entries = entries_from_path(path, args)?;
 
     if args.directory {
         entries.retain(|entry| entry.metadata.is_dir());
@@ -138,13 +133,13 @@ pub fn get_filtered_entries(path: &PathBuf, args: &Args) -> Vec<Entry> {
     }
 
     if args.all {
-        entries.push(Entry::from_parent_level(path.clone(), 0, args.get_theme()).unwrap());
-        entries.push(Entry::from_parent_level(path.clone(), 1, args.get_theme()).unwrap());
+        entries.push(Entry::from_parent_level(path.clone(), 0, args.get_theme())?);
+        entries.push(Entry::from_parent_level(path.clone(), 1, args.get_theme())?);
     }
 
     if !args.show_dot_files() {
         entries.retain(|entry| !entry.name.starts_with("."))
     }
 
-    entries
+    Ok(entries)
 }

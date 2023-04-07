@@ -73,13 +73,3 @@ impl ArgsSteroids for Args {
         get_colors(if self.dark { Theme::Dark } else { Theme::Light })
     }
 }
-
-pub fn get_current_dir() -> PathBuf {
-    match env::current_dir() {
-        Ok(dir) => dir,
-        Err(e) => {
-            // TODO: handle error (no dir or no permission)
-            panic!("Error: {}", e);
-        }
-    }
-}

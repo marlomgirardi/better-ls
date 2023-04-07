@@ -5,6 +5,7 @@ use crate::{
     cli::{Args, ArgsSteroids},
     config::ColorScheme,
     entry::{get_filtered_entries, Entry},
+    errors::BetterLsError,
 };
 
 pub trait List {
@@ -114,8 +115,8 @@ impl List for DetailedList {
     }
 }
 
-pub fn create_list(path: PathBuf, args: &Args) -> Box<dyn List> {
-    let mut entries = get_filtered_entries(&path, &args);
+pub fn create_list(path: PathBuf, args: &Args) -> Result<Box<dyn List>, BetterLsError> {
+    let mut entries = get_filtered_entries(&path, &args)?;
 
     entries.sort_by(|a, b| a.name.cmp(&b.name));
 
@@ -125,8 +126,8 @@ pub fn create_list(path: PathBuf, args: &Args) -> Box<dyn List> {
             owner: !args.long_listing_no_owner,
             ..Default::default()
         };
-        Box::new(DetailedList::new(entries, options))
+        Ok(Box::new(DetailedList::new(entries, options)))
     } else {
-        Box::new(InlineList::new(entries))
+        Ok(Box::new(InlineList::new(entries)))
     }
 }

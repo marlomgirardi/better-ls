@@ -1,3 +1,4 @@
+use colored::Colorize;
 use lazy_static::lazy_static;
 use serde::Deserialize;
 use std::{fs::File, path::PathBuf};
@@ -32,11 +33,11 @@ pub struct ColorScheme {
 
 lazy_static! {
     #[derive(Debug)]
-    pub static ref COLORS: Colors = get_config_file("config/colors.yml");
+    static ref COLORS: Colors = get_config_file("config/colors.yml");
     #[derive(Debug)]
-    pub static ref FOLDER_ICONS: IconMapping = get_config_file("config/folders.yml");
+    static ref FOLDER_ICONS: IconMapping = get_config_file("config/folders.yml");
     #[derive(Debug)]
-    pub static ref FILE_ICONS: IconMapping = get_config_file("config/files.yml");
+    static ref FILE_ICONS: IconMapping = get_config_file("config/files.yml");
 }
 
 pub const DEFAULT_DIR_ICON: &str = "";
@@ -64,23 +65,32 @@ pub fn get_file_icons() -> &'static IconMapping {
     &*FILE_ICONS
 }
 
+// Only used for lazy_static,
+
 fn get_config_file<YamlType>(path: &str) -> YamlType
 where
     YamlType: for<'de> Deserialize<'de>,
 {
-    let full_path = get_project_root_dir().join(path);
-    let file = File::open(full_path).unwrap();
+    let path_buf: PathBuf;
+
+    #[cfg(feature = "find_project_root")]
+    {
+        // Required mainly when running within one of the directories of the project.
+        path_buf = std::env::current_dir()
+            .unwrap()
+            .ancestors()
+            .find(|dir| dir.join("Cargo.toml").exists())
+            .unwrap()
+            .to_path_buf()
+            .join(path);
+    }
+
+    #[cfg(not(feature = "find_project_root"))]
+    {
+        path_buf = PathBuf::from(path);
+    }
+
+    let file = File::open(path_buf).unwrap();
     let folders: YamlType = serde_yaml::from_reader(file).unwrap();
     folders
-}
-
-/// Get the root directory of the project.
-/// Required mainly when running within one of the directories of the project.
-fn get_project_root_dir() -> PathBuf {
-    let current_dir = std::env::current_dir().unwrap();
-    current_dir
-        .ancestors()
-        .find(|dir| dir.join("Cargo.toml").exists())
-        .unwrap()
-        .to_path_buf()
 }
