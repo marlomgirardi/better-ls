@@ -80,6 +80,8 @@ impl List for DetailedList {
     fn size(&self) -> usize {
         self.entries.len()
     }
+
+    // FIXME? There are a few unhandled errors here.
     fn print(&self, colors: &ColorScheme) {
         for entry in &self.entries {
             let mut line: Vec<String> = Vec::new();

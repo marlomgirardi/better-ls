@@ -62,7 +62,10 @@ fn main() {
 
     let colors = args.get_theme();
     paths.iter().for_each(|path| {
-        let full_path = path.canonicalize().unwrap();
+        let full_path = match path.canonicalize() {
+            Ok(path) => path,
+            Err(_) => path.clone(),
+        };
         if full_path.is_dir() {
             if args.paths.len() > 1 {
                 println!("{}:", path.display());
