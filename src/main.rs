@@ -69,7 +69,13 @@ fn main() {
             }
 
             match create_list(full_path, &args) {
-                Ok(list) => list.print(&colors),
+                Ok(list) => {
+                    if list.size() > 0 {
+                        list.print(&colors)
+                    } else {
+                        println!("{}", "This directory is empty.".yellow());
+                    }
+                }
                 Err(err) => match &err {
                     // This is the one stop for errors as we show it per path listing.
                     BetterLsError::Unknown(unknown_err) => {

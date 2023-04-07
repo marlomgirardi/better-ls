@@ -9,6 +9,7 @@ use crate::{
 };
 
 pub trait List {
+    fn size(&self) -> usize;
     fn print(&self, colors: &ColorScheme);
 }
 
@@ -25,6 +26,9 @@ impl InlineList {
 }
 
 impl List for InlineList {
+    fn size(&self) -> usize {
+        self.entries.len()
+    }
     fn print(&self, _: &ColorScheme) {
         let list = self
             .entries
@@ -73,6 +77,9 @@ impl Default for DetailedListOptions {
 }
 
 impl List for DetailedList {
+    fn size(&self) -> usize {
+        self.entries.len()
+    }
     fn print(&self, colors: &ColorScheme) {
         for entry in &self.entries {
             let mut line: Vec<String> = Vec::new();
