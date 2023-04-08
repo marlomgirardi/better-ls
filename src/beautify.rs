@@ -17,6 +17,7 @@ pub fn get_icon_from_metadata(metadata: &Metadata, file_name: &String) -> String
     }
 }
 
+// FIXME? There are a few unhandled errors here.
 fn get_directory_icon(dir: &String) -> String {
     let mut icon = config::DEFAULT_DIR_ICON;
 
@@ -35,6 +36,7 @@ fn get_directory_icon(dir: &String) -> String {
     icon.to_string()
 }
 
+// FIXME? There are a few unhandled errors here.
 fn get_file_icon(file: &String) -> String {
     let mut icon = config::DEFAULT_FILE_ICON;
     let file_icons = config::get_file_icons();
@@ -175,4 +177,110 @@ pub fn format_date(date: SystemTime) -> String {
     let datetime: DateTime<Local> = date.into();
     let formatted = datetime.format("%a %b %e %T %Y").to_string();
     formatted
+}
+
+#[cfg(test)]
+mod test {
+    use crate::config::RGB;
+
+    use super::*;
+
+    fn get_mocked_colors() -> ColorScheme {
+        ColorScheme {
+            dir: [255, 255, 255],
+            recognized_file: [255, 255, 255],
+            unrecognized_file: [255, 255, 255],
+            executable_file: [255, 255, 255],
+            read: [255, 255, 255],
+            write: [255, 255, 255],
+            exec: [255, 255, 255],
+            no_access: [255, 255, 255],
+        }
+    }
+
+    fn add_true_color(s: &str, color: RGB) -> ColoredString {
+        s.truecolor(color[0], color[1], color[2])
+    }
+
+    // #[test]
+    // fn test_get_icon_from_metadata() {
+    //     // TODO: Still need to understand a bit more in depth how mock works and the standards for it.
+    //     let colors = get_mocked_colors();
+    //     let metadata = Metadata::; ???
+    //     let icon = get_icon_from_metadata(&metadata, &colors);
+
+    //     assert_eq!(icon, add_true_color("?", colors.unrecognized_file));
+    // }
+
+    #[test]
+    fn test_format_permissions() {
+        let colors = get_mocked_colors();
+        let formatted = format_permissions(0o777, &colors);
+
+        let expected = format!(
+            "{}{}{}{}{}{}{}{}{}",
+            add_true_color("r", colors.read),
+            add_true_color("w", colors.write),
+            add_true_color("x", colors.exec),
+            add_true_color("r", colors.read),
+            add_true_color("w", colors.write),
+            add_true_color("x", colors.exec),
+            add_true_color("r", colors.read),
+            add_true_color("w", colors.write),
+            add_true_color("x", colors.exec),
+        );
+        assert_eq!(formatted, expected);
+    }
+
+    #[test]
+    fn test_format_permissions_no_access() {
+        let colors = get_mocked_colors();
+        let formatted = format_permissions(0o000, &colors);
+
+        let expected = format!(
+            "{}{}{}{}{}{}{}{}{}",
+            add_true_color("-", colors.no_access),
+            add_true_color("-", colors.no_access),
+            add_true_color("-", colors.no_access),
+            add_true_color("-", colors.no_access),
+            add_true_color("-", colors.no_access),
+            add_true_color("-", colors.no_access),
+            add_true_color("-", colors.no_access),
+            add_true_color("-", colors.no_access),
+            add_true_color("-", colors.no_access),
+        );
+
+        assert_eq!(formatted, expected);
+    }
+
+    #[test]
+    fn test_get_owner() {
+        let owner = get_owner(0).unwrap();
+        assert_eq!(owner, "root");
+    }
+
+    #[test]
+    fn test_get_owner_error() {
+        let owner_err = get_owner(9999999).unwrap_err();
+        assert_eq!(owner_err.to_string(), "uid reference for 9999999 is null");
+    }
+
+    #[test]
+    fn test_get_group() {
+        let group = get_group(0).unwrap();
+        assert_eq!(group, "wheel");
+    }
+
+    #[test]
+    fn test_get_group_error() {
+        let group_err = get_group(9999999).unwrap_err();
+        assert_eq!(group_err.to_string(), "Group reference for 9999999 is null");
+    }
+
+    #[test]
+    fn test_format_date() {
+        let date = SystemTime::UNIX_EPOCH;
+        let formatted = format_date(date);
+        assert_eq!(formatted, "Thu Jan  1 01:00:00 1970");
+    }
 }
