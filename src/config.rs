@@ -1,4 +1,3 @@
-use colored::Colorize;
 use lazy_static::lazy_static;
 use serde::Deserialize;
 use std::{fs::File, path::PathBuf};

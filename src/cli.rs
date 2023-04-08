@@ -1,6 +1,4 @@
 use clap::Parser;
-use std::{env, path::PathBuf};
-// use std::{env, path};
 
 use crate::config::{get_colors, ColorScheme, Theme};
 
