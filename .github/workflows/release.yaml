@@ -13,11 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - name: Cache dependencies
+        uses: actions/cache@v3
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            target
+          key: ${{ runner.os }}-build-cache-dependencies-${{ steps.checksum.outputs.checksum }}
+          restore-keys: ${{ runner.os }}-build-cache-dependencies
       - name: Release Build
         run: cargo build --release
       - name: "Upload Artifact"
