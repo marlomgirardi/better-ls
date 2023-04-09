@@ -18,7 +18,7 @@ pub fn get_icon_from_metadata(metadata: &Metadata, file_name: &String) -> String
 }
 
 // FIXME? There are a few unhandled errors here.
-fn get_directory_icon(dir: &String) -> String {
+fn get_directory_icon(dir: &str) -> String {
     let mut icon = config::DEFAULT_DIR_ICON;
 
     let folders = config::get_folder_icons();
@@ -28,8 +28,8 @@ fn get_directory_icon(dir: &String) -> String {
         icon = folders.icons.get(&dir).unwrap().as_str().unwrap();
     } else {
         let alias = folders.aliases.get(&dir);
-        if alias.is_some() {
-            icon = folders.icons.get(alias.unwrap()).unwrap().as_str().unwrap();
+        if let Some(key) = alias {
+            icon = folders.icons.get(key).unwrap().as_str().unwrap();
         }
     }
 
@@ -42,24 +42,19 @@ fn get_file_icon(file: &String) -> String {
     let file_icons = config::get_file_icons();
     let ext = file.split('.').last().unwrap().to_lowercase();
 
-    if file_icons.icons.contains_key(&file) {
-        icon = file_icons.icons.get(&file).unwrap().as_str().unwrap();
+    if file_icons.icons.contains_key(file) {
+        icon = file_icons.icons.get(file).unwrap().as_str().unwrap();
         // TODO: how to handle file.spec.ts as example?
     } else if file_icons.icons.contains_key(&ext) {
         icon = file_icons.icons.get(ext).unwrap().as_str().unwrap();
     } else {
-        let mut alias = file_icons.aliases.get(&file);
+        let mut alias = file_icons.aliases.get(file);
         if alias.is_none() {
             alias = file_icons.aliases.get(ext);
         }
 
-        if alias.is_some() {
-            icon = file_icons
-                .icons
-                .get(alias.unwrap())
-                .unwrap()
-                .as_str()
-                .unwrap();
+        if let Some(key) = alias {
+            icon = file_icons.icons.get(key).unwrap().as_str().unwrap();
         }
     }
 
@@ -170,7 +165,7 @@ pub fn get_group(gid: u32) -> io::Result<String> {
         ))?
     }
 
-    Ok(groupname.to_string())
+    Ok(groupname)
 }
 
 pub fn format_date(date: SystemTime) -> String {
@@ -181,7 +176,7 @@ pub fn format_date(date: SystemTime) -> String {
 
 #[cfg(test)]
 mod test {
-    use crate::config::RGB;
+    use crate::config::Rgb;
 
     use super::*;
 
@@ -198,7 +193,7 @@ mod test {
         }
     }
 
-    fn add_true_color(s: &str, color: RGB) -> ColoredString {
+    fn add_true_color(s: &str, color: Rgb) -> ColoredString {
         s.truecolor(color[0], color[1], color[2])
     }
 

@@ -125,7 +125,7 @@ impl List for DetailedList {
 }
 
 pub fn create_list(path: PathBuf, args: &Args) -> Result<Box<dyn List>, BetterLsError> {
-    let mut entries = get_filtered_entries(&path, &args)?;
+    let mut entries = get_filtered_entries(&path, args)?;
 
     entries.sort_by(|a, b| a.name.cmp(&b.name));
 

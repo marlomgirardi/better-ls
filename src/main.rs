@@ -26,23 +26,23 @@ fn main() {
     }
 
     let args = cli::Args::parse();
-    let paths: Vec<PathBuf>;
     let mut exit_code = 0;
 
-    if args.paths.is_empty() {
+    let paths: Vec<PathBuf> = if args.paths.is_empty() {
         let current_dir = match env::current_dir() {
             Ok(dir) => dir,
             Err(err) => {
-                let msg = format!("Looks like you don't have access to the current directory 😱");
-                eprintln!("{}", msg.red());
+                eprintln!(
+                    "{}",
+                    "Looks like you don't have access to the current directory 😱".red()
+                );
                 eprintln!("{}", err);
                 process::exit(err.raw_os_error().unwrap_or(1));
             }
         };
-        paths = vec![current_dir];
+        vec![current_dir]
     } else {
-        paths = args
-            .paths
+        args.paths
             .iter()
             .filter_map(|path_arg| {
                 let path = PathBuf::from(path_arg);
@@ -55,8 +55,8 @@ fn main() {
                     None
                 }
             })
-            .collect();
-    }
+            .collect()
+    };
 
     println!();
 
@@ -74,7 +74,7 @@ fn main() {
             match create_list(full_path, &args) {
                 Ok(list) => {
                     if list.size() > 0 {
-                        list.print(&colors)
+                        list.print(colors)
                     } else {
                         println!("{}", "This directory is empty.".yellow());
                     }

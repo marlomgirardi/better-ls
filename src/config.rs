@@ -15,19 +15,19 @@ pub struct Colors {
     // pub light: ColorScheme,
 }
 
-// RGB type vec
-pub type RGB = [u8; 3];
+// Rgb type vec
+pub type Rgb = [u8; 3];
 
 #[derive(Debug, Deserialize)]
 pub struct ColorScheme {
-    pub dir: RGB,
-    pub recognized_file: RGB,
-    pub unrecognized_file: RGB,
-    pub executable_file: RGB,
-    pub read: RGB,
-    pub write: RGB,
-    pub exec: RGB,
-    pub no_access: RGB,
+    pub dir: Rgb,
+    pub recognized_file: Rgb,
+    pub unrecognized_file: Rgb,
+    pub executable_file: Rgb,
+    pub read: Rgb,
+    pub write: Rgb,
+    pub exec: Rgb,
+    pub no_access: Rgb,
 }
 
 lazy_static! {
@@ -57,11 +57,11 @@ pub fn get_colors(theme: Theme) -> &'static ColorScheme {
 }
 
 pub fn get_folder_icons() -> &'static IconMapping {
-    &*FOLDER_ICONS
+    &FOLDER_ICONS
 }
 
 pub fn get_file_icons() -> &'static IconMapping {
-    &*FILE_ICONS
+    &FILE_ICONS
 }
 
 // Only used for lazy_static,

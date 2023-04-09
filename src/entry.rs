@@ -8,7 +8,7 @@ use std::{
 use crate::{
     beautify::get_icon_from_metadata,
     cli::{Args, ArgsSteroids},
-    config::{ColorScheme, DEFAULT_FILE_ICON, RGB},
+    config::{ColorScheme, Rgb, DEFAULT_FILE_ICON},
     errors::{exhaustive_io_error_mapping, BetterLsError},
 };
 
@@ -18,7 +18,7 @@ pub struct Entry {
     pub name: String,
     pub path: PathBuf,
     pub metadata: Metadata,
-    pub color: RGB,
+    pub color: Rgb,
 }
 
 impl Entry {
@@ -72,7 +72,7 @@ impl Entry {
         Entry::from_path(parent_path, Some(name), colors)
     }
 
-    pub fn new(name: String, path: PathBuf, icon: String, color: RGB, metadata: Metadata) -> Self {
+    pub fn new(name: String, path: PathBuf, icon: String, color: Rgb, metadata: Metadata) -> Self {
         Self {
             name,
             path,
@@ -109,17 +109,12 @@ fn entries_from_path(path: &PathBuf, args: &Args) -> Result<Vec<Entry>, BetterLs
         }
     };
 
-    let entries = read_dir
+    read_dir
         .map(|dir| match dir {
             Ok(dir) => Entry::from_path(dir.path(), None, theme),
-            Err(err) => {
-                // At this point we know it is not permission denied as we already checked that.
-                return Err(BetterLsError::Unknown(err));
-            }
+            Err(err) => Err(BetterLsError::Unknown(err)),
         })
-        .collect::<Result<Vec<_>, _>>();
-
-    entries
+        .collect::<Result<Vec<_>, _>>()
 }
 
 /// Generic filtering of entries based on arguments.
@@ -138,7 +133,7 @@ pub fn get_filtered_entries(path: &PathBuf, args: &Args) -> Result<Vec<Entry>, B
     }
 
     if !args.show_dot_files() {
-        entries.retain(|entry| !entry.name.starts_with("."))
+        entries.retain(|entry| !entry.name.starts_with('.'))
     }
 
     Ok(entries)
