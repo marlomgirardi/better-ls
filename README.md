@@ -1,5 +1,7 @@
 # Better LS
 
+⚠️ As of now, this is no replacement for anything, this is only a personal project I decided to create to learn rust.
+
 We use icons from [NerdFonts](https://www.nerdfonts.com/cheat-sheet)
 
 This is compatible only with terminals that support `truecolor`.
