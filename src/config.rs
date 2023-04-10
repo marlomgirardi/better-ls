@@ -59,9 +59,9 @@ pub struct ColorScheme {
     pub no_access: Rgb,
 }
 
-static COLORS_YAML: &'static str = include_str!("../config/colors.yml");
-static FOLDERS_YAML: &'static str = include_str!("../config/folders.yml");
-static FILES_YAML: &'static str = include_str!("../config/files.yml");
+static COLORS_YAML: &str = include_str!("../config/colors.yml");
+static FOLDERS_YAML: &str = include_str!("../config/folders.yml");
+static FILES_YAML: &str = include_str!("../config/files.yml");
 
 // TODO: worth leting it as yaml to add custom configuration later, or just use the struct directly?
 lazy_static! {
