@@ -12,6 +12,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Get Cargo.lock checksum
+        id: checksum
+        run: echo "::set-output name=checksum::$(md5sum Cargo.lock | cut -d ' ' -f 1)"
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            target
+          key: ${{ runner.os }}-build-cache-dependencies-${{ steps.checksum.outputs.checksum }}
+          restore-keys: ${{ runner.os }}-build-cache-dependencies
       - uses: actions-rs/cargo@v1
         with:
           command: check
@@ -31,6 +44,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Get Cargo.lock checksum
+        id: checksum
+        run: echo "::set-output name=checksum::$(md5sum Cargo.lock | cut -d ' ' -f 1)"
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            target
+          key: ${{ runner.os }}-build-cache-dependencies-${{ steps.checksum.outputs.checksum }}
+          restore-keys: ${{ runner.os }}-build-cache-dependencies
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
