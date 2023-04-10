@@ -10,10 +10,6 @@ Type `echo $COLORTERM` in your terminal, if the result is `truecolor` you are go
 
 ## How-to
 
-### Testing within the project repo.
-
-There is a feature called `find_project_root` that will run in place to find the closest `Cargo.toml` while in dev.
-
 ### Add icons
 
 Under config there is two files, `folders.yml` and `files.yml`. Both are used to map names to icons with the same structure:

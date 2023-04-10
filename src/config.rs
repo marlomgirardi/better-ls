@@ -1,6 +1,6 @@
+use colored::Colorize;
 use lazy_static::lazy_static;
 use serde::Deserialize;
-use std::{fs::File, path::PathBuf};
 
 /// IconMapping is used to map icons and alias to files and directories.
 #[derive(Debug, Deserialize)]
@@ -9,10 +9,39 @@ pub struct IconMapping {
     pub aliases: serde_yaml::Mapping,
 }
 
+impl Default for IconMapping {
+    fn default() -> Self {
+        println!("{}", "Using default icon mapping".yellow());
+        IconMapping {
+            icons: serde_yaml::Mapping::new(),
+            aliases: serde_yaml::Mapping::new(),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Colors {
     pub dark: ColorScheme,
     // pub light: ColorScheme,
+}
+
+impl Default for Colors {
+    fn default() -> Self {
+        println!("{}", "Using default colors".yellow());
+        let white = [255, 255, 255];
+        Colors {
+            dark: ColorScheme {
+                dir: white,
+                recognized_file: white,
+                unrecognized_file: white,
+                executable_file: white,
+                read: white,
+                write: white,
+                exec: white,
+                no_access: white,
+            },
+        }
+    }
 }
 
 // Rgb type vec
@@ -30,13 +59,18 @@ pub struct ColorScheme {
     pub no_access: Rgb,
 }
 
+static COLORS_YAML: &'static str = include_str!("../config/colors.yml");
+static FOLDERS_YAML: &'static str = include_str!("../config/folders.yml");
+static FILES_YAML: &'static str = include_str!("../config/files.yml");
+
+// TODO: worth leting it as yaml to add custom configuration later, or just use the struct directly?
 lazy_static! {
     #[derive(Debug)]
-    static ref COLORS: Colors = get_config_file("config/colors.yml");
+    static ref COLORS: Colors = serde_yaml::from_str(COLORS_YAML).unwrap_or_default();
     #[derive(Debug)]
-    static ref FOLDER_ICONS: IconMapping = get_config_file("config/folders.yml");
+    static ref FOLDER_ICONS: IconMapping = serde_yaml::from_str(FOLDERS_YAML).unwrap_or_default();
     #[derive(Debug)]
-    static ref FILE_ICONS: IconMapping = get_config_file("config/files.yml");
+    static ref FILE_ICONS: IconMapping = serde_yaml::from_str(FILES_YAML).unwrap_or_default();
 }
 
 pub const DEFAULT_DIR_ICON: &str = "";
@@ -62,34 +96,4 @@ pub fn get_folder_icons() -> &'static IconMapping {
 
 pub fn get_file_icons() -> &'static IconMapping {
     &FILE_ICONS
-}
-
-// Only used for lazy_static,
-
-fn get_config_file<YamlType>(path: &str) -> YamlType
-where
-    YamlType: for<'de> Deserialize<'de>,
-{
-    let path_buf: PathBuf;
-
-    #[cfg(feature = "find_project_root")]
-    {
-        // Required mainly when running within one of the directories of the project.
-        path_buf = std::env::current_dir()
-            .unwrap()
-            .ancestors()
-            .find(|dir| dir.join("Cargo.toml").exists())
-            .unwrap()
-            .to_path_buf()
-            .join(path);
-    }
-
-    #[cfg(not(feature = "find_project_root"))]
-    {
-        path_buf = PathBuf::from(path);
-    }
-
-    let file = File::open(path_buf).unwrap();
-    let folders: YamlType = serde_yaml::from_reader(file).unwrap();
-    folders
 }

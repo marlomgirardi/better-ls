@@ -25,4 +25,3 @@ serde_yaml = "0.9"
 lazy_static = "1.4.0"
 
 [features]
-find_project_root = []

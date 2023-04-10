@@ -13,18 +13,6 @@ use std::{env, path::PathBuf, process};
 use crate::{cli::ArgsSteroids, errors::BetterLsError};
 
 fn main() {
-    #[cfg(feature = "find_project_root")]
-    {
-        println!(
-            "{}",
-            "Using find_project_root feature".yellow().bold().italic()
-        );
-        println!(
-            "{}",
-            "> This should only be enabled in dev".yellow().italic()
-        );
-    }
-
     let args = cli::Args::parse();
     let mut exit_code = 0;
 
